@@ -57,28 +57,6 @@ $result = $conn->query("SELECT * FROM items");
             align-items: center;
             gap: 24px;
         }
-        .cart-icon {
-            position: relative;
-            font-size: 1.5em;
-            color: #fff;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-        .cart-icon:hover {
-            color: #4CAF50;
-        }
-        .cart-counter {
-            position: absolute;
-            top: -8px;
-            right: -10px;
-            background: #e74c3c;
-            color: #fff;
-            border-radius: 50%;
-            font-size: 0.8em;
-            padding: 2px 7px;
-            font-weight: bold;
-            border: 2px solid #fff;
-        }
         .username {
             font-size: 1em;
             color: #fff;
@@ -213,25 +191,26 @@ $result = $conn->query("SELECT * FROM items");
     </style>
 </head>
 <body>
+    <!-- This is the new, functional cart widget. It's already linked to cart.php -->
+    <?php include __DIR__ . '/../../../includes/cart_widget.php'; ?>
+
     <div class="navbar">
         <div class="shop-name">Rodney's Shop</div>
         <div class="menu">
             <a href="#">Home</a>
-            <a href="#">Shop</a>
+            <a href="../../../products.php">Shop</a>
             <a href="#">About</a>
             <a href="#">Contact</a>
         </div>
         <div class="right">
-            <div class="cart-icon" onclick="showCart()">
-                <i class="fa fa-shopping-cart"></i>
-                <span class="cart-counter" id="cartCounter">0</span>
-            </div>
+            <!-- The old cart icon with the popup has been removed from here -->
             <span class="username">
                 <?php echo htmlspecialchars($username); ?>
             </span>
             <a href="../../logout.php" class="logout-btn">Logout</a>
         </div>
     </div>
+
     <div class="container">
         <div class="welcome-section">
             <div class="welcome-icon">
@@ -250,42 +229,73 @@ $result = $conn->query("SELECT * FROM items");
                 <div class="item-card">
                     <strong><?php echo htmlspecialchars($row['name']); ?></strong>
                     <div class="desc"><?php echo htmlspecialchars($row['description']); ?></div>
-                    <em>$<?php echo number_format($row['price'], 2); ?></em>
-                    <button class="add-cart-btn" onclick="addToCart('<?php echo addslashes($row['name']); ?>')">
-                        <i class="fa fa-cart-plus"></i> Add to Cart
-                    </button>
+                    <div class="price">$<?php echo number_format($row['price'], 2); ?></div>
+                    <div class="stock"><?php echo htmlspecialchars($row['quantity']); ?> in stock</div>
+                    
+                    <form class="add-to-cart-form" onsubmit="return addToCartAjax(this);">
+                        <input type="hidden" name="action" value="add">
+                        <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
+                        <input type="hidden" name="name" value="<?php echo htmlspecialchars($row['name']); ?>">
+                        <input type="hidden" name="price" value="<?php echo $row['price']; ?>">
+                        <input type="hidden" name="quantity" value="1">
+                        <input type="hidden" name="ajax" value="1">
+                        
+                        <button type="submit" class="add-cart-btn">
+                            <i class="fa fa-cart-plus"></i> Add to Cart
+                        </button>
+                        <div class="success-message"></div>
+                        <div class="error-message"></div>
+                    </form>
                 </div>
             <?php endwhile; ?>
         </div>
     </div>
+
     <script>
-        // Simple cart using localStorage for demo
-        function getCart() {
-            return JSON.parse(localStorage.getItem('cart') || '[]');
+        // This script sends an AJAX request to your cart_actions.php
+        function addToCartAjax(form) {
+            const formData = new FormData(form);
+            const button = form.querySelector('.add-cart-btn');
+            const successMsg = form.querySelector('.success-message');
+            const errorMsg = form.querySelector('.error-message');
+
+            successMsg.style.display = 'none';
+            errorMsg.style.display = 'none';
+            button.disabled = true;
+            button.innerHTML = 'Adding...';
+
+            fetch('../../../cart_actions.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateCartWidget(); // This function is in cart_widget.php
+                    successMsg.textContent = 'Added to cart!';
+                    successMsg.style.display = 'block';
+                    setTimeout(() => { successMsg.style.display = 'none'; }, 3000);
+                } else {
+                    errorMsg.textContent = data.message || 'Could not add item.';
+                    errorMsg.style.display = 'block';
+                    setTimeout(() => { errorMsg.style.display = 'none'; }, 4000);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                errorMsg.textContent = 'An error occurred.';
+                errorMsg.style.display = 'block';
+            })
+            .finally(() => {
+                button.disabled = false;
+                button.innerHTML = '<i class="fa fa-cart-plus"></i> Add to Cart';
+            });
+
+            return false; 
         }
-        function setCart(cart) {
-            localStorage.setItem('cart', JSON.stringify(cart));
-        }
-        function updateCartCounter() {
-            const cart = getCart();
-            document.getElementById('cartCounter').textContent = cart.length;
-        }
-        function addToCart(itemName) {
-            let cart = getCart();
-            cart.push(itemName);
-            setCart(cart);
-            updateCartCounter();
-        }
-        function showCart() {
-            const cart = getCart();
-            if (cart.length === 0) {
-                alert('Your cart is empty!');
-            } else {
-                alert('Items in cart:\n' + cart.join('\n'));
-            }
-        }
-        // Initialize cart counter on page load
-        updateCartCounter();
+
+        // IMPORTANT: Also, make sure to delete any old JavaScript functions 
+        // like showCart(), getCart(), setCart(), etc. from this script tag.
     </script>
 </body>
 </html>
