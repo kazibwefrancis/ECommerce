@@ -49,6 +49,33 @@ $result = $conn->query("SELECT * FROM items");
     </style>
 </head>
 <body>
+<div id="sidebar" style="position:fixed;top:0;left:-250px;width:250px;height:100%;background:#222;color:#fff;transition:left 0.3s;z-index:1000;padding:30px 10px;">
+    <h2 id="sidebarMessage">This is my side bar</h2>
+</div>
+<button id="sidebarToggle" style="position:fixed;top:20px;left:20px;z-index:1100;padding:10px 15px;border:none;background:#27ae60;color:#fff;border-radius:4px;cursor:pointer;">
+    ☰
+</button>
+<script>
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    const sidebarMessage = document.getElementById('sidebarMessage');
+    let sidebarOpen = false;
+
+    toggleBtn.onclick = function () {
+        sidebarOpen = !sidebarOpen;
+        sidebar.style.left = sidebarOpen ? '0' : '-250px';
+        if (sidebarOpen) {
+            sidebarMessage.textContent = "Hello, this is my sidebar";
+        }
+    };
+
+    document.addEventListener('click', function (e) {
+        if (sidebarOpen && !sidebar.contains(e.target) && e.target !== toggleBtn) {
+            sidebar.style.left = '-250px';
+            sidebarOpen = false;
+        }
+    });
+</script>
 <div class="container">
     <h2>Admin Dashboard</h2>
     <form class="add-form" method="post">
